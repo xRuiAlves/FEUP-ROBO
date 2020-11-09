@@ -5,8 +5,8 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 
 # constants
-TARGET_WALL_DISTANCE = 1
-ROBOT_SPEED = TARGET_WALL_DISTANCE / 2
+TARGET_WALL_DISTANCE = 0.2
+ROBOT_SPEED = 0.05
 
 TARGET_DIAGONAL_DISTANCE = TARGET_WALL_DISTANCE / math.sin(math.pi / 4)
 
