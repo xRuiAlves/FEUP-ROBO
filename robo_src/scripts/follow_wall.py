@@ -1,25 +1,19 @@
 #!/usr/bin/env python
 import rospy
 import math
+import numpy as np
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
+from statistics import mean
 
 # constants
-TARGET_WALL_DISTANCE = 0.2
+TARGET_WALL_DISTANCE = 0.16
 ROBOT_SPEED = 0.05
-
-TARGET_DIAGONAL_DISTANCE = TARGET_WALL_DISTANCE / math.sin(math.pi / 4)
-
-TURNING_FACTOR = 0.65
-TURNING_SPEED = (ROBOT_SPEED * TURNING_FACTOR) / TARGET_WALL_DISTANCE
-
-# sensors
-SENSORS = {
-    "SENSOR_FL": 45,     # front-left
-    "SENSOR_L": 90,      # left
-    "SENSOR_R": 270,     # right
-    "SENSOR_FR": 315     # front-right
-}
+P_WEIGHT = 3
+D_WEIGHT = 1
+# D_MIN = -1
+# D_MAX = 1
+NUM_REGRESSION_POINTS = 15
 
 def moveRobot(pub, rotation):
     msg = Twist()
@@ -27,44 +21,78 @@ def moveRobot(pub, rotation):
     msg.angular.z = rotation
     pub.publish(msg)
 
-def getSensorDistance(sensor_data, angle):
-    distance = sensor_data.ranges[angle]
-    return distance if isDistanceValid(sensor_data, distance) else None
-        
-def getSensorDistances(sensor_data):
-    return list(map(
-        lambda angle: getSensorDistance(sensor_data, angle),
-        SENSORS.values()
-    ))
+def getClosestAngle(sensor_data):
+    closest_angle = None
+
+    for angle in range(len(sensor_data.ranges)):
+        if (isDistanceValid(sensor_data, sensor_data.ranges[angle])):
+            if (closest_angle == None):
+                closest_angle = angle
+            elif (sensor_data.ranges[angle] < sensor_data.ranges[closest_angle]):
+                closest_angle = angle
+
+    return closest_angle
+
+def getClosestPoints(sensor_data):
+    closest_angle = getClosestAngle(sensor_data)
+    if (closest_angle == None):
+        return []
+
+    distances = ((angle, sensor_data.ranges[angle]) for angle in range(len(sensor_data.ranges)))
+    valid_distances = list(filter(lambda ang_dist: isDistanceValid(sensor_data, ang_dist[1]), distances))
+    closest_distances = sorted(valid_distances, key=lambda ang_dist: ang_dist[1])[:NUM_REGRESSION_POINTS]
+    return list(map(lambda ang_dist: getPoint(ang_dist[0], ang_dist[1]), closest_distances))
+
+def getPoint(angle, distance):
+    x = distance * math.cos(degreeToRad(angle))
+    y = distance * math.sin(degreeToRad(angle))
+    return (x, y)
+
+def degreeToRad(ang_degrees):
+    return (ang_degrees / 180) * math.pi
 
 def isDistanceValid(sensor_data, distance):
-    return distance >= sensor_data.range_min and distance <= sensor_data.range_max
+    return distance != None and distance >= sensor_data.range_min and distance < sensor_data.range_max
+
+def findLinearRegressionSlope(points):
+    points_x = list(map(lambda point: point[0], points))
+    points_y = list(map(lambda point: point[1], points))
+
+    xs = np.array(points_x, dtype=np.float64)
+    ys = np.array(points_y, dtype=np.float64)
+
+    return (((mean(xs)*mean(ys)) - mean(xs*ys)) / ((mean(xs)**2) - mean(xs**2)))
+
+def calcP(sensor_data):
+    closest_angle = getClosestAngle(sensor_data)
+    if (closest_angle == None):
+        return 0
+
+    rospy.loginfo(f"ang : {closest_angle}")
+    distance = sensor_data.ranges[closest_angle]
+    rospy.loginfo(f"dist: {distance}")
+    diff = distance - TARGET_WALL_DISTANCE
+
+    turning_sign = 1 if (closest_angle >= 0 and closest_angle <= 180) else -1
+    return diff * turning_sign
+
+def calcDist(point):
+    return math.sqrt(point[0]**2 + point[1]**2)
+
+def calcD(sensor_data):
+    points = getClosestPoints(sensor_data)
+    slope = findLinearRegressionSlope(points)
+    return slope
 
 def callback(sensor_data, pub):
-    [fl, l, r, fr] = getSensorDistances(sensor_data)
+    P = calcP(sensor_data) * P_WEIGHT
+    D = calcD(sensor_data) * D_WEIGHT
 
-    should_follow_wall = (fl != None) or (fr != None)
-    should_turn = (not should_follow_wall) and ((l != None) or (r != None))
+    rospy.loginfo(f"P: {P}")
+    rospy.loginfo(f"D: {D}")
+    rospy.loginfo(f"---------------------")
 
-    rotation = 0
-
-    if (should_follow_wall):
-        rospy.loginfo("Following wall")
-        if (fl != None):
-            rospy.loginfo(f"\tfront_left = {fl}")
-            rotation += fl - TARGET_DIAGONAL_DISTANCE
-        if (fr != None):
-            rospy.loginfo(f"\tfront_right = {fr}")
-            rotation -= fr - TARGET_DIAGONAL_DISTANCE
-    elif (should_turn):
-        rospy.loginfo("Turning")
-        if (l != None):
-            rotation = TURNING_SPEED
-            rospy.loginfo("Turning left")
-        elif (r != None):
-            rotation = -TURNING_SPEED
-            rospy.loginfo("Turning right")
-
+    rotation = P + D
     moveRobot(pub, rotation)
     
 def listener():
