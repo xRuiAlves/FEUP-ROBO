@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import rospy
 import math
+import random
 import numpy as np
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
@@ -17,17 +18,27 @@ SENSORS = {
     "BACK_RIGHT": 255
 }
 
-# constants
+# distances
 TARGET_WALL_DISTANCE = 0.17
-ROBOT_SPEED = 0.16
-
 DISTANCE_THRESHOLD = 2 * TARGET_WALL_DISTANCE
+OBJECT_DETECTION_THRESHOLD = 3.2
+
+# robot forward motion
+SPEED = 0.16
+SPEED_FACTOR = 1.8
+ROBOT_MAX_SPEED = 0.5
+
+# robot turning motion
+TURNING_FACTOR = SPEED * TARGET_WALL_DISTANCE * 5/4 * math.pi
+TURNING_SPEED = TURNING_FACTOR * 2 * math.pi
+MAX_RANDOM_TURN = math.pi/4
+MIN_RANDOM_TURN = -MAX_RANDOM_TURN
+
+# wall detection weights
 DISTACE_DIFF_WEIGHT = 3
 LIN_REGRESSION_WEIGHT = 5
 NUM_REGRESSION_POINTS = 25
 
-TURNING_FACTOR = ROBOT_SPEED * TARGET_WALL_DISTANCE * 5/4 * math.pi
-TURNING_SPEED = TURNING_FACTOR * 2 * math.pi
 
 def moveRobot(pub, speed, rotation):
     msg = Twist()
@@ -101,6 +112,9 @@ def getAngIntervalDistSum(sensor_data, ang_from, ang_to):
     distances = sensor_data.ranges[ang_from : ang_to]
     return sum(filter(lambda distance: isDistanceValid(sensor_data, distance), distances))
 
+def getRandomTurningAngle():
+    return random.uniform(MIN_RANDOM_TURN, MAX_RANDOM_TURN)
+
 def calcSpeedRotation(sensor_data):
     f = getAngleDistance(sensor_data, SENSORS["FRONT"])
     fl = getAngleDistance(sensor_data, SENSORS["FRONTAL_LEFT"])
@@ -120,30 +134,39 @@ def calcSpeedRotation(sensor_data):
     should_turn_right = has_close_right_wall and (fr == None or fr >= 1.15 * DISTANCE_THRESHOLD)
 
     if (frontal_collision_danger):
-        rospy.loginfo("FRONTAL_COLLISION")
+        rospy.loginfo(">> FRONTAL COLLISION <<")
         should_turn_left = bl == None or (br != None and bl > br)
         return 0, 2.5 * TURNING_SPEED * (1 if should_turn_left else -1)
     if (should_turn_right and has_close_left_wall):
-        rospy.loginfo("TURNING SOFT LEFT")
-        return 1.8 * ROBOT_SPEED, 0.8 * TURNING_SPEED
+        rospy.loginfo(">> TURNING SOFT LEFT <<")
+        return SPEED_FACTOR * SPEED, 0.8 * TURNING_SPEED
     if (should_turn_left and has_close_right_wall):
-        rospy.loginfo("TURNING SOFT RIGHT")
-        return 1.8 * ROBOT_SPEED, 0.8 * TURNING_SPEED * -1
+        rospy.loginfo(">> TURNING SOFT RIGHT <<")
+        return SPEED_FACTOR * SPEED, 0.8 * TURNING_SPEED * -1
     if (should_turn_left):
-        rospy.loginfo("TURNING LEFT")
-        return 1.8 * ROBOT_SPEED, 1.5 * TURNING_SPEED
+        rospy.loginfo(">> TURNING LEFT <<")
+        return SPEED_FACTOR * SPEED, 1.5 * TURNING_SPEED
     if (should_turn_right):
-        rospy.loginfo("TURNING RIGHT")
-        return 1.8 * ROBOT_SPEED, 1.5 * TURNING_SPEED * -1
+        rospy.loginfo(">> TURNING RIGHT <<")
+        return SPEED_FACTOR * SPEED, 1.5 * TURNING_SPEED * -1
     if (has_close_left_wall or has_close_right_wall):
-        rospy.loginfo("FOLLOWING WALL")
+        rospy.loginfo(">> FOLLOWING WALL <<")
         distance_diff = calcDistanceDiff(sensor_data) * DISTACE_DIFF_WEIGHT
         lin_regression_slope = calcLinRegresionSlope(sensor_data) * LIN_REGRESSION_WEIGHT
         rotation = distance_diff + lin_regression_slope
-        return (1.8 if rotation > 0 else 1.6) * ROBOT_SPEED, rotation
+        return (SPEED_FACTOR if rotation > 0 else (SPEED_FACTOR - 0.2)) * SPEED, rotation
     else:
-        rospy.loginfo("EXPLORING")
-        return 1.5 * ROBOT_SPEED, 0
+        closest_angle = getClosestAngle(sensor_data)
+        if (closest_angle == None):
+            rospy.loginfo(">> WANDERING WITHOUT TARGET<<")
+            return ROBOT_MAX_SPEED, getRandomTurningAngle()
+        else:
+            rospy.loginfo(">> WANDERING WITH TARGET<<")
+            lin_regression_slope = calcLinRegresionSlope(sensor_data) * LIN_REGRESSION_WEIGHT
+            angle_quadrant_sign = (-1 if (closest_angle > 90 and closest_angle < 270) else 1)
+            angle_slope_sign = (1 if lin_regression_slope < 0 else -1)
+            rotation = math.pi/4 * angle_slope_sign * angle_quadrant_sign
+            return SPEED_FACTOR * SPEED, rotation
 
 def callback(sensor_data, pub):
     speed, rotation = calcSpeedRotation(sensor_data)
