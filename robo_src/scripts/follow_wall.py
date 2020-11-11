@@ -115,6 +115,7 @@ def calcSpeedRotation(sensor_data):
 
     has_close_left_wall = (l != None and l < DISTANCE_THRESHOLD) or (bl != None and bl < DISTANCE_THRESHOLD)
     has_close_right_wall = (r != None and r < DISTANCE_THRESHOLD) or (br != None and br < DISTANCE_THRESHOLD)
+
     should_turn_left = has_close_left_wall and (fl == None or fl >= 1.15 * DISTANCE_THRESHOLD)
     should_turn_right = has_close_right_wall and (fr == None or fr >= 1.15 * DISTANCE_THRESHOLD)
 
@@ -122,17 +123,24 @@ def calcSpeedRotation(sensor_data):
         rospy.loginfo("FRONTAL_COLLISION")
         should_turn_left = bl == None or (br != None and bl > br)
         return 0, 2.5 * TURNING_SPEED * (1 if should_turn_left else -1)
+    if (should_turn_right and has_close_left_wall):
+        rospy.loginfo("TURNING SOFT LEFT")
+        return 1.8 * ROBOT_SPEED, 0.8 * TURNING_SPEED
+    if (should_turn_left and has_close_right_wall):
+        rospy.loginfo("TURNING SOFT RIGHT")
+        return 1.8 * ROBOT_SPEED, 0.8 * TURNING_SPEED * -1
     if (should_turn_left):
         rospy.loginfo("TURNING LEFT")
         return 1.8 * ROBOT_SPEED, 1.5 * TURNING_SPEED
     if (should_turn_right):
         rospy.loginfo("TURNING RIGHT")
-        return 1.8 * ROBOT_SPEED, 1.5 * TURNING_SPEED
+        return 1.8 * ROBOT_SPEED, 1.5 * TURNING_SPEED * -1
     if (has_close_left_wall or has_close_right_wall):
         rospy.loginfo("FOLLOWING WALL")
         distance_diff = calcDistanceDiff(sensor_data) * DISTACE_DIFF_WEIGHT
         lin_regression_slope = calcLinRegresionSlope(sensor_data) * LIN_REGRESSION_WEIGHT
-        return 1.8 * ROBOT_SPEED, distance_diff + lin_regression_slope
+        rotation = distance_diff + lin_regression_slope
+        return (1.8 if rotation > 0 else 1.6) * ROBOT_SPEED, rotation
     else:
         rospy.loginfo("EXPLORING")
         return 1.5 * ROBOT_SPEED, 0
