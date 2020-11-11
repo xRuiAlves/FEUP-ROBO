@@ -5,7 +5,7 @@
     <arg name="z_pos" default="0.0"/>
 
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
-	<arg name="world_name" value="$(find robo)/worlds/Le2_world.world"/>
+	<arg name="world_name" value="$(find robo)/worlds/open_D_shape_5.world"/>
 	<arg name="paused" value="false"/>
 	<arg name="use_sim_time" value="true"/>
 	<arg name="gui" value="true"/>
@@ -16,6 +16,4 @@
     <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro" />
 
     <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf" args="-urdf -model turtlebot3_$(arg model) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
-
-    <!-- <node pkg="robo" type="test.py" name="test" output="screen" /> -->
 </launch>
