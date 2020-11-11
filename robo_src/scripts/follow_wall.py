@@ -180,8 +180,8 @@ def callback(sensor_data, pub):
 def listener():
     rospy.init_node('robot', anonymous=True)
 
-    sub = rospy.Subscriber('/scan', LaserScan, lambda sensor_data: callback(sensor_data, pub))
     pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+    sub = rospy.Subscriber('/scan', LaserScan, lambda sensor_data: callback(sensor_data, pub))
 
     rospy.spin()
 
