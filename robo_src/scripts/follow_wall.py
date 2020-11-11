@@ -107,32 +107,32 @@ def calcSpeedRotation(sensor_data):
     fr = getAngleDistance(sensor_data, SENSORS["FRONTAL_RIGHT"])
     l = getAngleDistance(sensor_data, SENSORS["LEFT"])
     r = getAngleDistance(sensor_data, SENSORS["RIGHT"])
+    bl = getAngleDistance(sensor_data, SENSORS["BACK_LEFT"])
+    br = getAngleDistance(sensor_data, SENSORS["BACK_RIGHT"])
 
     has_frontal_diagonals = fl != None or fr != None
     frontal_collision_danger = f != None and f <= DISTANCE_THRESHOLD
 
-    has_close_left_wall = (l != None and l < DISTANCE_THRESHOLD)
-    has_close_right_wall = (r != None and r < DISTANCE_THRESHOLD)
+    has_close_left_wall = (l != None and l < DISTANCE_THRESHOLD) or (bl != None and bl < DISTANCE_THRESHOLD)
+    has_close_right_wall = (r != None and r < DISTANCE_THRESHOLD) or (br != None and br < DISTANCE_THRESHOLD)
     should_turn_left = has_close_left_wall and (fl == None or fl >= 1.15 * DISTANCE_THRESHOLD)
     should_turn_right = has_close_right_wall and (fr == None or fr >= 1.15 * DISTANCE_THRESHOLD)
 
     if (frontal_collision_danger):
         rospy.loginfo("FRONTAL_COLLISION")
-        bl = getAngleDistance(sensor_data, SENSORS["BACK_LEFT"])
-        br = getAngleDistance(sensor_data, SENSORS["BACK_RIGHT"])
         should_turn_left = bl == None or (br != None and bl > br)
-        return 0, 2.25 * TURNING_SPEED * (1 if should_turn_left else -1)
+        return 0, 2.5 * TURNING_SPEED * (1 if should_turn_left else -1)
     if (should_turn_left):
         rospy.loginfo("TURNING LEFT")
-        return 1.4 * ROBOT_SPEED, 1.1 * TURNING_SPEED
+        return 1.8 * ROBOT_SPEED, 1.5 * TURNING_SPEED
     if (should_turn_right):
         rospy.loginfo("TURNING RIGHT")
-        return 1.4 * ROBOT_SPEED, 1.1 * TURNING_SPEED
+        return 1.8 * ROBOT_SPEED, 1.5 * TURNING_SPEED
     if (has_close_left_wall or has_close_right_wall):
         rospy.loginfo("FOLLOWING WALL")
         distance_diff = calcDistanceDiff(sensor_data) * DISTACE_DIFF_WEIGHT
         lin_regression_slope = calcLinRegresionSlope(sensor_data) * LIN_REGRESSION_WEIGHT
-        return 1.5 * ROBOT_SPEED, distance_diff + lin_regression_slope
+        return 1.8 * ROBOT_SPEED, distance_diff + lin_regression_slope
     else:
         rospy.loginfo("EXPLORING")
         return 1.5 * ROBOT_SPEED, 0
