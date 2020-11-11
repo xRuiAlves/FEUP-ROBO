@@ -2,6 +2,7 @@
 import rospy
 import math
 import random
+import sys
 import numpy as np
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
@@ -25,11 +26,12 @@ OBJECT_DETECTION_THRESHOLD = 3.2
 
 # robot forward motion
 SPEED = 0.16
-SPEED_FACTOR = 1.8
+SPEED_MULTIPLER = (float(sys.argv[1]) if (len(sys.argv) >= 2) else 1.8)
 ROBOT_MAX_SPEED = 0.5
 
 # robot turning motion
-TURNING_FACTOR = SPEED * TARGET_WALL_DISTANCE * 5/4 * math.pi
+TURNING_MULTIPLIER = (float(sys.argv[2]) if (len(sys.argv) >= 3) else 5/4)
+TURNING_FACTOR = SPEED * TARGET_WALL_DISTANCE * TURNING_MULTIPLIER * math.pi
 TURNING_SPEED = TURNING_FACTOR * 2 * math.pi
 MAX_RANDOM_TURN = math.pi/4
 MIN_RANDOM_TURN = -MAX_RANDOM_TURN
@@ -139,22 +141,22 @@ def calcSpeedRotation(sensor_data):
         return 0, 2.5 * TURNING_SPEED * (1 if should_turn_left else -1)
     if (should_turn_right and has_close_left_wall):
         rospy.loginfo(">> TURNING SOFT LEFT <<")
-        return SPEED_FACTOR * SPEED, 0.8 * TURNING_SPEED
+        return SPEED_MULTIPLER * SPEED, 0.8 * TURNING_SPEED
     if (should_turn_left and has_close_right_wall):
         rospy.loginfo(">> TURNING SOFT RIGHT <<")
-        return SPEED_FACTOR * SPEED, 0.8 * TURNING_SPEED * -1
+        return SPEED_MULTIPLER * SPEED, 0.8 * TURNING_SPEED * -1
     if (should_turn_left):
         rospy.loginfo(">> TURNING LEFT <<")
-        return SPEED_FACTOR * SPEED, 1.5 * TURNING_SPEED
+        return SPEED_MULTIPLER * SPEED, 1.5 * TURNING_SPEED
     if (should_turn_right):
         rospy.loginfo(">> TURNING RIGHT <<")
-        return SPEED_FACTOR * SPEED, 1.5 * TURNING_SPEED * -1
+        return SPEED_MULTIPLER * SPEED, 1.5 * TURNING_SPEED * -1
     if (has_close_left_wall or has_close_right_wall):
         rospy.loginfo(">> FOLLOWING WALL <<")
         distance_diff = calcDistanceDiff(sensor_data) * DISTACE_DIFF_WEIGHT
         lin_regression_slope = calcLinRegresionSlope(sensor_data) * LIN_REGRESSION_WEIGHT
         rotation = distance_diff + lin_regression_slope
-        return (SPEED_FACTOR if rotation > 0 else (SPEED_FACTOR - 0.2)) * SPEED, rotation
+        return (SPEED_MULTIPLER if rotation > 0 else (SPEED_MULTIPLER - 0.2)) * SPEED, rotation
     else:
         closest_angle = getClosestAngle(sensor_data)
         if (closest_angle == None):
@@ -166,7 +168,7 @@ def calcSpeedRotation(sensor_data):
             angle_quadrant_sign = (-1 if (closest_angle > 90 and closest_angle < 270) else 1)
             angle_slope_sign = (1 if lin_regression_slope < 0 else -1)
             rotation = math.pi/4 * angle_slope_sign * angle_quadrant_sign
-            return SPEED_FACTOR * SPEED, rotation
+            return SPEED_MULTIPLER * SPEED, rotation
 
 def callback(sensor_data, pub):
     speed, rotation = calcSpeedRotation(sensor_data)
