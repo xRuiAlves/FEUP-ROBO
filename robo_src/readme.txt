@@ -1,4 +1,4 @@
-# 
+# A study on heuristics for LIDAR-based wall-following AGVs
 
 ###### authors: Filipa Durão (up201606640@fe.up.pt), Miguel Duarte (up201606298@fe.up.pt), Rui Alves (up201606746@fe.up.pt)
 
