@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'base = robo_fi.base:main'
+            'base = robo_fi.base:main',
+            'test_listen = robo_fi.test_listen:main'
         ],
     },
 )
