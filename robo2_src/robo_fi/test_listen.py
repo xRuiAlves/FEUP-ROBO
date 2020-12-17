@@ -10,7 +10,7 @@ class TestListen(Node):
 
         self.create_subscription(
                 LaserScan,
-                'scan_fake',
+                'scan_fi',
                 self.scan_callback,
                 qos_profile=qos_profile_sensor_data
             )

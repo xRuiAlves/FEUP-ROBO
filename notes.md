@@ -5,7 +5,7 @@
 ### Change tb3 src
 
 * `src/turtlebot3/turtlebot3_simulations/turtlebot3_gazebo/src/turtlebot3_drive.cpp`
-* `s/"scan"/"scan_fake"`
+* `s/"scan"/"scan_fi"`
 * Don't forget to recompile
 
 ## Services to run

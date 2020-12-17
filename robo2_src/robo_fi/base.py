@@ -7,61 +7,83 @@ from sensor_msgs.msg import LaserScan
 
 import math
 import random
+import sys
 
-class Base(Node):
+class Base(Node):    
     def __init__(self):
         super().__init__('fault_injector')
         qos = QoSProfile(depth=10)
 
+        injection_callbacks = {
+            "field_scale": self.field_scale_injection,
+            "set_field_fixed": self.set_field_fixed_injection,
+            "set_field_random": self.set_field_random_injection,
+            "set_field_null": self.set_field_null_injection,
+            "send_nothing": self.send_nothing
+        }
+
+        if (len(sys.argv) < 2):
+            print("Missing arguments!")
+            print("usage: base <injection type> [<argument>]")
+            sys.exit(1)
+        
+        injection = sys.argv[1]
+        argument = (sys.argv[2] if len(sys.argv) >= 3 else None)
+        if (injection not in injection_callbacks.keys()):
+            print("Invalid injection type!")
+            print("Available types:")
+            for available_injection in injection_callbacks.keys():
+                print(f"\t{available_injection}")
+            sys.exit(2)
+
+        print(f"Injection: {injection}")
+        if argument != None:
+            print(f"Argument: {argument}")
+        else:
+            argument = -1
+
         self.pub = self.create_publisher(
                 LaserScan,
-                'scan_fake',
-                # 'scan',
+                'scan_fi',
                 qos_profile_sensor_data
             )
+
         self.create_subscription(
                 LaserScan,
                 'scan',
-                # 'scan_in',
-                self.scan_callback,
+                lambda sensor_data: injection_callbacks.get(injection)(sensor_data, float(argument)),
                 qos_profile=qos_profile_sensor_data
             )
 
-    def scan_callback(self, sensor_data):
-        # if sensor_data.ranges[0] == 1.0:
-        #     return
-        # print(sensor_data)
-        msg = LaserScan()
-        # copied
-        msg.angle_min = math.radians(0)
-        msg.angle_max = math.radians(360)
-        msg.angle_increment = math.radians(1)
-        msg.range_min = sensor_data.range_min
-        msg.range_max = sensor_data.range_max
-        msg.header = sensor_data.header
-        # msg.ranges = sensor_data.ranges
-        # spoofed
-        msg.ranges = [0.0]*360
-        for idx, x in enumerate(sensor_data.ranges):
-            msg.ranges[idx] = 0.5 * x
-
-        # for i in range(360):
-        #     msg.ranges[i] = (i * (msg.range_max - msg.range_min) / 360) + msg.range_min
-        # msg.ranges[0] = 1.0
-
-        msg.intensities = [0.0]*360
-        # print(msg)
+    def field_scale_injection(self, sensor_data, factor):
+        msg = sensor_data
+        msg.ranges = [(factor * val) for val in msg.ranges]
         self.pub.publish(msg)
 
+    def set_field_fixed_injection(self, sensor_data, value):
+        msg = sensor_data
+        msg.ranges = [value] * len(msg.ranges)
+        self.pub.publish(msg)
+
+    def set_field_random_injection(self, sensor_data, _value):
+        msg = sensor_data
+        msg.ranges = [random.uniform(0, 10) for val in msg.ranges]
+        self.pub.publish(msg)
+
+    def set_field_null_injection(self, sensor_data, _value):
+        msg = sensor_data
+        msg.ranges = [None] * len(msg.ranges)
+        self.pub.publish(msg)
+
+    def send_nothing(self, _sensor_data, _value):
+        pass
+
 def main(args=None):
-    print('Hi from robo_fi.')
+    print("Fault injection system initialized.\n")
     rclpy.init(args=args)
     base = Base()
     rclpy.spin(base)
 
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
     base.destroy_node()
     rclpy.shutdown()
 
