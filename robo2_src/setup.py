@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'base = robo_fi.base:main',
+            'fault_injector = robo_fi.fault_injector:main',
             'test_listen = robo_fi.test_listen:main'
         ],
     },
