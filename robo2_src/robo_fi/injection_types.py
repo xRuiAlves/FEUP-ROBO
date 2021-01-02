@@ -23,9 +23,8 @@ class AbstractInjector(ABC):
 
         return self._do_mutate_message(message)
     
-    # @abstractmethod
     def _print_self(self):
-        print(self.__class__.__name__, vars(self))
+        print(self.__class__.__name__)
 
     def print_pipeline(self):
         if self.__wrappee:
@@ -38,6 +37,9 @@ class FixedInjector(AbstractInjector):
         super().__init__(wrappee)
         self.__fixed_value = fixed_value
 
+    def _print_self(self):
+        print(self.__class__.__name__, f"- fixed value: {self.__fixed_value}")
+
     def _do_mutate_message(self, msg):
         msg.ranges = [self.__fixed_value] * len(msg.ranges)
         return msg
@@ -46,6 +48,9 @@ class ScaleInjector(AbstractInjector):
     def __init__(self, wrappee, scale_factor):
         super().__init__(wrappee)
         self.__scale_factor = scale_factor
+
+    def _print_self(self):
+        print(self.__class__.__name__, f"- scale factor: {self.__scale_factor}")
 
     def _do_mutate_message(self, msg):
         msg.ranges = [(self.__scale_factor * val) for val in msg.ranges]
@@ -71,6 +76,9 @@ class AddConstantInjector(AbstractInjector):
     def __init__(self, wrappee, constant):
         super().__init__(wrappee)
         self.__constant = constant
+
+    def _print_self(self):
+        print(self.__class__.__name__, f"- constant: {self.__constant}")
 
     def _do_mutate_message(self, msg):
         msg.ranges = [(self.__constant + val) for val in msg.ranges]

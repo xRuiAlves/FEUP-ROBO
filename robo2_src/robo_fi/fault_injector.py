@@ -62,7 +62,7 @@ def main(args=None):
     print("Fault injection system initialized")
     print(f"Retransmitting the messages received from '{args['from']}' to '{args['to']}' after mutation via fault injection pipeline.")
 
-    # Maybe TODO print this in a cool way? (take advantage of the stack like in the mutate method)
+    print("\nInjection pipeline to be used:")
     pipeline.print_pipeline()
 
     rclpy.spin(communicator)
