@@ -1,3 +1,3 @@
 #!/usr/bin/env sh
 
-docker build -t robo2:full full/ 
+docker build -t ros_fault_injection:full full/ 
