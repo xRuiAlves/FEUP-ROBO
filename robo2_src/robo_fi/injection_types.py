@@ -19,9 +19,19 @@ class AbstractInjector(ABC):
         The default is just retransmitting the same data.
         """
         if self.__wrappee:
-            message = self.__wrappee._do_mutate_message(message)
+            message = self.__wrappee.mutate_message(message)
 
         return self._do_mutate_message(message)
+    
+    # @abstractmethod
+    def _print_self(self):
+        print(self.__class__.__name__, vars(self))
+
+    def print_pipeline(self):
+        if self.__wrappee:
+            self.__wrappee.print_pipeline()
+
+        self._print_self()
 
 class FixedInjector(AbstractInjector):
     def __init__(self, wrappee, fixed_value):

@@ -18,12 +18,12 @@ def get_args():
 def injector_factory(i_type, i_args, pipeline):
     if i_type == 'fixed':
         if len(i_args) < 1:
-            print(f"Not enough arguments for injection type {i_type}! Expected 1 but got {len(i_args)}.")
+            print(f"Not enough arguments for injection type '{i_type}'! Expected 1 but got {len(i_args)}.")
             sys.exit(4)
         return FixedInjector(pipeline, float(i_args[0]))
     elif i_type == 'scale':
         if len(i_args) < 1:
-            print(f"Not enough arguments for injection type {i_type}! Expected 1 but got {len(i_args)}.")
+            print(f"Not enough arguments for injection type '{i_type}'! Expected 1 but got {len(i_args)}.")
             sys.exit(4)
         return ScaleInjector(pipeline, float(i_args[0]))
     elif i_type == 'random':
@@ -33,7 +33,7 @@ def injector_factory(i_type, i_args, pipeline):
         return NullInjector(pipeline)
     elif i_type == 'addc':
         if len(i_args) < 1:
-            print(f"Not enough arguments for injection type {i_type}! Expected 1 but got {len(i_args)}.")
+            print(f"Not enough arguments for injection type '{i_type}'! Expected 1 but got {len(i_args)}.")
             sys.exit(4)
         return AddConstantInjector(pipeline, float(i_args[0]))
     else:
@@ -61,7 +61,9 @@ def main(args=None):
     communicator = PipelinedRetransmitter(pipeline, args['from'], args['to'])
     print("Fault injection system initialized")
     print(f"Retransmitting the messages received from '{args['from']}' to '{args['to']}' after mutation via fault injection pipeline.")
+
     # Maybe TODO print this in a cool way? (take advantage of the stack like in the mutate method)
+    pipeline.print_pipeline()
 
     rclpy.spin(communicator)
 
