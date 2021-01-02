@@ -46,7 +46,7 @@ class RandomInjector(AbstractInjector):
         super().__init__(wrappee)
 
     def _do_mutate_message(self, msg):
-        msg.ranges = [random.uniform(msg.range_min, msg.range_max) for _ in msg.ranges]
+        msg.ranges = [random.uniform(0, 1) for _ in msg.ranges]
         return msg
 
 class NullInjector(AbstractInjector):
@@ -55,4 +55,13 @@ class NullInjector(AbstractInjector):
 
     def _do_mutate_message(self, msg):
         msg.ranges = [0.0] * len(msg.ranges)
+        return msg
+
+class AddConstantInjector(AbstractInjector):
+    def __init__(self, wrappee, constant):
+        super().__init__(wrappee)
+        self.__constant = constant
+
+    def _do_mutate_message(self, msg):
+        msg.ranges = [(self.__constant + val) for val in msg.ranges]
         return msg
