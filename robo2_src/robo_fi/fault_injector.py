@@ -4,7 +4,7 @@ import argparse
 import sys
 
 from robo_fi.communication import PipelinedRetransmitter
-from robo_fi.injection_types import FixedInjector, ScaleInjector, RandomInjector, NullInjector, AddConstantInjector
+from robo_fi.injection_types import FixedInjector, ScaleInjector, RandomInjector, NullInjector, AddConstantInjector, RotationInjector
 
 def get_args():
     p = argparse.ArgumentParser(description='Fault Injection Toolkit for ROS2')
@@ -36,6 +36,11 @@ def injector_factory(i_type, i_args, pipeline):
             print(f"Not enough arguments for injection type '{i_type}'! Expected 1 but got {len(i_args)}.")
             sys.exit(4)
         return AddConstantInjector(pipeline, float(i_args[0]))
+    elif i_type == 'rotate':
+        if len(i_args) < 1:
+            print(f"Not enough arguments for injection type '{i_type}'! Expected 1 but got {len(i_args)}.")
+            sys.exit(4)
+        return RotationInjector(pipeline, int(i_args[0]))
     else:
         raise Exception('Unexpected value for fault injection type')
 
@@ -48,7 +53,7 @@ def main(args=None):
     
     pipeline = None
 
-    injection_types = {'fixed', 'scale', 'random', 'null', 'addc'}
+    injection_types = {'fixed', 'scale', 'random', 'null', 'addc', 'rotate'}
     for injection_type, *injection_args in args['fi']:
         if injection_type not in injection_types:
             print(f"{injection_type} is not a valid injection type (one of {injection_types})")

@@ -83,3 +83,16 @@ class AddConstantInjector(AbstractInjector):
     def _do_mutate_message(self, msg):
         msg.ranges = [(self.__constant + val) for val in msg.ranges]
         return msg
+
+class RotationInjector(AbstractInjector):
+    def __init__(self, wrappee, rotation):
+        super().__init__(wrappee)
+        self.__raw_rotation = rotation
+        self.__rotation = -(abs(rotation) % 360)
+
+    def _print_self(self):
+        print(self.__class__.__name__, f"- rotation factor: {self.__raw_rotation}")
+
+    def _do_mutate_message(self, msg):
+        msg.ranges = msg.ranges[self.__rotation:] + msg.ranges[:self.__rotation]
+        return msg
