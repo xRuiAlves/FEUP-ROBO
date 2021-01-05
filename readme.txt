@@ -55,17 +55,12 @@ Table of Contents:
     ├── resource
     │   └── robo_fi
     ├── robo_fi
-    │   ├── base.py
     │   ├── communication.py
     │   ├── fault_injector.py
     │   ├── __init__.py
     │   ├── injection_types.py
-    │   └── test_listen.py
     ├── setup.cfg
     └── setup.py
-
-
-
 
 
 ************************
@@ -104,7 +99,7 @@ Given that docker containers are fully self-contained, one needs to use a tool t
 
 We recommend using rocker:
 
-$ rocker --oyr-run-arg " --name robo-rocker -v $(pwd)/../../robo2_src/:/root/robo/src/robo_fi/" --devices /dev/dri/card0 --x11 ros_fault_injection:full
+$ rocker --oyr-run-arg " --name robo-rocker -v $(pwd)/../../source/:/root/robo/src/robo_fi/" --devices /dev/dri/card0 --x11 ros_fault_injection:full
 
 Alternatively, you may simply run the "rocker_run.sh" utility script:
 
